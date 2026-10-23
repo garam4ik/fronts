@@ -1,61 +1,64 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>GeoFront — игровая карта</title>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GeoFront — игровая симуляция</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-:root{--bg:#111318;--panel:rgba(23,26,32,.97);--line:#3a404b;--blue:#4e91ff;--red:#f34c55;--gray:#9da5b2;--yellow:#ffbf37}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#f4f5f8;font:14px/1.4 system-ui,Arial,sans-serif}header{height:62px;background:#171a20;border-bottom:1px solid #363b45;display:flex;align-items:center;justify-content:space-between;padding:0 13px;gap:10px}.brand{font-weight:850;font-size:19px;font-style:italic}.brand small{display:block;font-size:9px;color:#aab1bd;font-style:normal;letter-spacing:.7px}button{color:#f1f3f7;background:#252a33;border:1px solid #414753;border-radius:9px;padding:10px 11px;font:inherit;cursor:pointer;touch-action:manipulation}button:active{filter:brightness(1.25)}button.active{outline:2px solid #4e91ff;background:#263d60}.primary{background:linear-gradient(110deg,#287bff,#ed3656);border:0;font-weight:750}#map{height:calc(100dvh - 62px);min-height:400px;background:#252a31}.leaflet-container{font:inherit}.leaflet-control-zoom a{background:#222730!important;color:#fff!important;border-color:#424853!important}
-#stats{position:absolute;z-index:500;top:72px;left:10px;right:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;pointer-events:none}.stat{background:#171a20ed;border:1px solid #3a404a;border-radius:9px;text-align:center;padding:8px 3px;font-weight:750;font-size:12px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
-.bottom{position:absolute;z-index:600;bottom:10px;left:10px;right:10px;max-width:780px;margin:auto;background:var(--panel);border:1px solid #3b414b;border-radius:14px;padding:9px;box-shadow:0 8px 30px #0007;backdrop-filter:blur(12px)}.sides{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.side{padding:10px 3px;font-weight:700;font-size:12px}.tools{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:7px}.tools button{padding:10px 4px;font-size:12px}.notice{font-size:10px;color:#c8ced8;text-align:center;margin:8px 2px 0}.drawingNote{display:none;margin-top:7px;background:#202e43;border:1px solid #45658e;border-radius:8px;padding:8px;text-align:center;font-size:12px}.drawingNote button{margin-left:5px;padding:6px 9px;background:#2f5b92}
-#toast{position:absolute;z-index:800;top:122px;left:50%;transform:translateX(-50%);background:#171a20f2;border:1px solid #414752;border-radius:9px;padding:8px 12px;max-width:90%;text-align:center;display:none}
-@media(max-width:520px){header{height:58px;padding:0 9px}.brand{font-size:17px}#map{height:calc(100dvh - 58px)}#stats{top:65px;left:6px;right:6px;gap:4px}.stat{font-size:11px;padding:7px 1px}.bottom{bottom:6px;left:6px;right:6px;padding:7px}.side{font-size:11px}.tools button{font-size:11px;padding:9px 2px}.notice{font-size:9px}}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#15181e;color:#f4f6fa;font:14px system-ui,Arial,sans-serif;overflow:hidden}
+header{height:62px;background:#171a20;border-bottom:1px solid #353b45;display:flex;align-items:center;justify-content:space-between;padding:0 14px;gap:12px;position:relative;z-index:500}
+.logo{font-size:21px;font-weight:850;font-style:italic}.sub{font-size:9px;letter-spacing:.8px;color:#adb5c2;font-style:normal;font-weight:500}
+button{background:#252a33;color:#f2f4f8;border:1px solid #414854;border-radius:10px;padding:9px 13px;font:inherit;cursor:pointer}
+#save{background:linear-gradient(110deg,#287bff,#ed3656);border:0;font-weight:750}
+#map{height:calc(100% - 62px);background:#282d34;cursor:crosshair}.leaflet-container{font:inherit}.leaflet-control-zoom a{background:#222730!important;color:#fff!important;border-color:#424853!important}
+.topstats{position:absolute;z-index:450;top:72px;left:12px;right:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:7px;pointer-events:none}
+.stat{background:#171a20ed;border:1px solid #3a404a;border-radius:10px;text-align:center;padding:8px 3px;font-weight:750;backdrop-filter:blur(8px)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+.bottom{position:absolute;z-index:500;bottom:12px;left:12px;right:12px;max-width:700px;margin:auto;background:rgba(23,26,32,.96);border:1px solid #3b414b;border-radius:15px;padding:9px;box-shadow:0 8px 30px #0007;backdrop-filter:blur(12px)}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:8px}.side{font-weight:750;padding:12px}.side.active{outline:2px solid #e5eaf4;background:#303642}
+.hint{text-align:center;color:#cbd1db;font-size:11px;margin:8px 4px 2px}.warning{position:absolute;z-index:400;bottom:155px;left:50%;transform:translateX(-50%);background:#171a20e8;border:1px solid #424854;border-radius:10px;padding:8px 12px;font-size:12px;text-align:center;max-width:90%;pointer-events:none}
+#toast{display:none;position:absolute;z-index:1000;top:45%;left:50%;transform:translate(-50%,-50%);background:#171a20f5;border:1px solid #596271;border-radius:14px;padding:18px 24px;text-align:center;min-width:210px;box-shadow:0 10px 40px #0009;font-size:16px;font-weight:750}
+#toast small{display:block;font-size:12px;font-weight:500;color:#c3cad5;margin-top:5px}
+.spinner{width:20px;height:20px;border:3px solid #5b6574;border-top-color:#fff;border-radius:50%;display:inline-block;vertical-align:middle;margin-right:9px;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:550px){header{height:58px;padding:0 9px}.logo{font-size:18px}#map{height:calc(100% - 58px)}.topstats{top:65px;left:6px;right:6px;gap:4px}.stat{font-size:11px;padding:7px 1px}.bottom{bottom:7px;left:7px;right:7px;padding:7px}.side{font-size:13px;padding:11px 4px}.hint{font-size:10px}.warning{bottom:145px;font-size:10px}}
 </style></head><body>
-<header><div class="brand">🌐 GeoFront <small>ВЫМЫШЛЕННАЯ ИГРОВАЯ СИМУЛЯЦИЯ</small></div><button id="save" class="primary">Сохранить</button></header>
+<header><div class="logo">🌐 GeoFront <div class="sub">ВЫМЫШЛЕННАЯ ИГРОВАЯ СИМУЛЯЦИЯ</div></div><button id="save">Сохранить</button></header>
 <div id="map"></div>
-<div id="stats">
-<div class="stat"><span class="dot" style="background:var(--blue)"></span><span id="bluePct">0%</span></div><div class="stat"><span class="dot" style="background:var(--red)"></span><span id="redPct">0%</span></div><div class="stat"><span class="dot" style="background:var(--gray)"></span><span id="grayPct">0%</span></div><div class="stat"><span class="dot" style="background:var(--yellow)"></span><span id="yellowPct">0%</span></div></div>
-<div id="toast"></div>
-<div class="bottom">
-<div class="sides"><button class="side" data-side="red"><span class="dot" style="background:var(--red)"></span>Россия</button><button class="side active" data-side="blue"><span class="dot" style="background:var(--blue)"></span>Украина</button><button class="side" data-side="gray"><span class="dot" style="background:var(--gray)"></span>Серая</button><button class="side" data-side="yellow"><span class="dot" style="background:var(--yellow)"></span>Нейтр.</button></div>
-<div class="tools"><button id="area">⬠ Обвести область</button><button id="line">✎ Линия</button><button id="undo">↶ Отменить</button><button id="erase">⌫ Ластик</button></div>
-<div class="tools"><button id="finish" disabled>✓ Завершить</button><button id="cancel" disabled>✕ Отмена</button><button id="clear">Очистить всё</button><button id="export">Экспорт JSON</button></div>
-<div class="drawingNote" id="drawingNote">Зажми левую кнопку мыши и веди по карте. Отпусти кнопку — рисунок завершится автоматически.</div>
-<div class="notice">⚠ Это вымышленная игра. Раскраска, линии и проценты не показывают реальные боевые действия, линию фронта или контроль территорий.</div>
+<div class="topstats">
+<div class="stat"><span class="dot" style="background:#4e91ff"></span><span id="bluePct">Украина</span></div>
+<div class="stat"><span class="dot" style="background:#f34c55"></span><span id="redPct">Россия</span></div>
+<div class="stat"><span class="dot" style="background:#9da5b2"></span><span id="grayPct">Серая зона</span></div>
+<div class="stat"><span class="dot" style="background:#ffbf37"></span><span id="yellowPct">Нейтральная</span></div>
 </div>
+<div class="warning">Только игровая раскраска Украины и России · не реальные боевые действия</div>
+<div id="toast"><span id="toastText">Считаю...</span><small id="toastSub">Обрабатываю игровую территорию</small></div>
+<div class="bottom"><div class="sides">
+<button class="side active" data-side="blue"><span class="dot" style="background:#4e91ff"></span> Украина</button>
+<button class="side" data-side="red"><span class="dot" style="background:#f34c55"></span> Россия</button>
+</div><div class="hint">Выбери сторону и зажми ПРАВУЮ кнопку мыши, чтобы обвести область. Отпусти — игра автоматически посчитает захват.</div></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-(()=>{
-const map=L.map('map',{zoomControl:true,doubleClickZoom:false,preferCanvas:true,tap:true}).setView([49.0,31.3],5);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:13,attribution:'© OpenStreetMap contributors'}).addTo(map);
-const color={red:'#f34c55',blue:'#4e91ff',gray:'#9da5b2',yellow:'#ffbf37'}, fill={red:'rgba(243,76,85,.48)',blue:'rgba(78,145,255,.48)',gray:'rgba(157,165,178,.48)',yellow:'rgba(255,191,55,.48)'};
-let side='blue',mode=null,erase=false,points=[],preview=null,history=[],objects=[];
-const drawn=L.featureGroup().addTo(map);
-function toast(s){let t=document.getElementById('toast');t.textContent=s;t.style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.style.display='none',2500)}
-function style(s,kind){return {color:color[s],weight:kind==='line'?7:3,opacity:.95,fillColor:color[s],fillOpacity:kind==='line'?0:.48}}
-function snap(){history.push(drawn.toGeoJSON());if(history.length>50)history.shift()}
-function update(){let c={red:0,blue:0,gray:0,yellow:0};drawn.eachLayer(l=>{c[l._side||'blue']++});let n=Object.values(c).reduce((a,b)=>a+b,0)||1;for(let k in c)document.getElementById(k+'Pct').textContent=(100*c[k]/n).toFixed(1).replace('.',',')+'%'}
-function finishMode(){mode=null;points=[];if(preview){map.removeLayer(preview);preview=null}map.dragging.enable();document.getElementById('drawingNote').style.display='none';document.getElementById('finish').disabled=true;document.getElementById('cancel').disabled=true}
-function begin(m){erase=false;mode=m;points=[];if(preview){map.removeLayer(preview);preview=null}map.dragging.disable();document.getElementById('drawingNote').style.display='block';document.getElementById('finish').disabled=true;document.getElementById('cancel').disabled=false;document.getElementById('drawingNote').innerHTML='Зажми левую кнопку мыши и веди по карте, чтобы обвести. Отпусти кнопку — готово.';toast(m==='area'?'Зажми мышь и обведи территорию':'Зажми мышь и нарисуй линию')}
-function addVertex(ll){if(points.length){let last=points[points.length-1];if(map.distance(last,ll)<1000)return}points.push(ll);if(preview)map.removeLayer(preview);preview=(mode==='area'?L.polygon(points,style(side,'area')):L.polyline(points,style(side,'line'))).addTo(map)}
-let isDrawing=false;
-map.getContainer().addEventListener('contextmenu',e=>e.preventDefault());
-map.on('mousedown',e=>{if(!mode||erase||e.originalEvent.button!==0)return;isDrawing=true;points=[];if(preview){map.removeLayer(preview);preview=null}addVertex(e.latlng);map.dragging.disable();L.DomEvent.preventDefault(e.originalEvent)});
-map.on('mousemove',e=>{if(isDrawing&&mode)addVertex(e.latlng)});
-function finishStroke(){if(!isDrawing)return;isDrawing=false;if(!mode)return;const required=mode==='area'?3:2;if(points.length<required){if(preview){map.removeLayer(preview);preview=null}points=[];toast(mode==='area'?'Обведи область чуть дольше':'Проведи линию чуть дольше');return}snap();let l=mode==='area'?L.polygon(points,style(side,'area')):L.polyline(points,style(side,'line'));l._side=side;l.addTo(drawn);finishMode();update();toast('Готово — рисунок сохранён на карте')}
-map.on('mouseup',finishStroke);
-map.getContainer().addEventListener('mouseleave',()=>{if(isDrawing)finishStroke()});
-map.on('touchstart',e=>{if(!mode||erase)return;isDrawing=true;points=[];if(preview){map.removeLayer(preview);preview=null}addVertex(e.latlng);map.dragging.disable()});
-map.on('touchmove',e=>{if(isDrawing&&mode)addVertex(e.latlng)});
-map.on('touchend',finishStroke);
-document.getElementById('area').onclick=()=>begin('area');document.getElementById('line').onclick=()=>begin('line');
-document.getElementById('finish').onclick=()=>{toast('Чтобы закончить, просто отпусти кнопку мыши')};
-document.getElementById('cancel').onclick=()=>{isDrawing=false;finishMode();toast('Рисование отменено')};
-document.querySelectorAll('[data-side]').forEach(b=>b.onclick=()=>{side=b.dataset.side;document.querySelectorAll('[data-side]').forEach(x=>x.classList.toggle('active',x===b));toast('Цвет: '+b.textContent.trim())});
-document.getElementById('erase').onclick=()=>{erase=!erase;document.getElementById('erase').classList.toggle('active',erase);finishMode();toast(erase?'Ластик: нажми на область или линию':'Ластик выключен')};
-document.getElementById('undo').onclick=()=>{if(mode){if(points.length){points.pop();if(preview)map.removeLayer(preview);preview=points.length?(mode==='area'?L.polygon(points,style(side,'area')):L.polyline(points,style(side,'line'))).addTo(map):null}else toast('Точек больше нет');return}if(!history.length){toast('Нечего отменять');return}let geo=history.pop();drawn.clearLayers();L.geoJSON(geo,{style:f=>style(f.properties?.side||'blue',f.geometry?.type==='LineString'?'line':'area')}).eachLayer(l=>{l._side=l.feature?.properties?.side||'blue';l.addTo(drawn)});update()};
-document.getElementById('clear').onclick=()=>{if(confirm('Удалить всю раскраску?')){snap();drawn.clearLayers();finishMode();update()}};
-document.getElementById('export').onclick=()=>{let data=drawn.toGeoJSON();data.features.forEach((f,i)=>{f.properties={...(f.properties||{}),side:[...drawn.getLayers()][i]?._side||'blue'}});let blob=new Blob([JSON.stringify({disclaimer:'Вымышленная игровая симуляция, не реальные боевые действия.',features:data},null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='geofront-save.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
-document.getElementById('save').onclick=()=>document.getElementById('export').click();
-document.querySelector('.notice').addEventListener('click',()=>{});
-update();
+(()=> {
+const map=L.map('map',{zoomControl:true,doubleClickZoom:false,preferCanvas:true}).setView([49.1,35.4],4);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:11,attribution:'© OpenStreetMap contributors'}).addTo(map);
+const fills={Ukraine:'rgba(55,137,255,.55)',Russia:'rgba(243,65,75,.48)'},lines={Ukraine:'#6da8ff',Russia:'#ff747b'};
+let side='Ukraine', countryLayer=null, countryGeo={}, drawing=false, pts=[], preview=null, captures=[], activeCountry=null;
+const captured=L.featureGroup().addTo(map);
+function toast(main,sub){document.getElementById('toastText').textContent=main;document.getElementById('toastSub').textContent=sub||'';document.getElementById('toast').style.display='block'}
+function hideToast(){document.getElementById('toast').style.display='none'}
+document.querySelectorAll('[data-side]').forEach(b=>b.onclick=()=>{side=b.dataset.side;document.querySelectorAll('[data-side]').forEach(x=>x.classList.toggle('active',x===b));});
+function pointInRing(pt,ring){let x=pt[0],y=pt[1],inside=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){let xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];let intersect=((yi>y)!=(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi+1e-20)+xi);if(intersect)inside=!inside}return inside}
+function inPolygon(latlng,geom){if(!geom)return false;let pt=[latlng.lng,latlng.lat],polys=geom.type==='Polygon'?[geom.coordinates]:geom.coordinates;for(let poly of polys){if(pointInRing(pt,poly[0])){let hole=false;for(let i=1;i<poly.length;i++)if(pointInRing(pt,poly[i]))hole=true;if(!hole)return true}}return false}
+function whichCountry(ll){if(inPolygon(ll,countryGeo.Ukraine))return 'Ukraine';if(inPolygon(ll,countryGeo.Russia))return 'Russia';return null}
+function updateNames(){document.getElementById('bluePct').textContent='Украина '+captures.filter(c=>c.side==='Ukraine').length;document.getElementById('redPct').textContent='Россия '+captures.filter(c=>c.side==='Russia').length}
+function showLoading(){toast('⟳ Считаю...','Проверяю нарисованный контур и считаю игровой захват')}
+function start(e){if(e.originalEvent.button!==2||!countryGeo.Ukraine||!countryGeo.Russia)return;let c=whichCountry(e.latlng);if(!c){toast('Только Украина и Россия','Начни обводку внутри одной из этих стран');setTimeout(hideToast,1400);return}drawing=true;activeCountry=c;pts=[e.latlng];if(preview)map.removeLayer(preview);preview=L.polyline(pts,{color:lines[side],weight:5,opacity:.95,dashArray:'5 4'}).addTo(map);map.dragging.disable();map.getContainer().style.cursor='crosshair';L.DomEvent.preventDefault(e.originalEvent)}
+function move(e){if(!drawing)return;let ll=e.latlng;if(whichCountry(ll)!==activeCountry)return;let last=pts[pts.length-1];if(map.distance(last,ll)<300)return;pts.push(ll);if(preview){map.removeLayer(preview);preview=L.polyline(pts,{color:lines[side],weight:5,opacity:.95,dashArray:'5 4'}).addTo(map)}}
+function end(){if(!drawing)return;drawing=false;map.dragging.enable();if(preview){map.removeLayer(preview);preview=null}if(pts.length<8){pts=[];activeCountry=null;return}showLoading();let p=pts.slice();if(map.distance(p[0],p[p.length-1])>1000)p.push(p[0]);setTimeout(()=>{let poly=L.polygon(p,{color:lines[side],weight:2,fillColor:side==='Ukraine'?'#3787ff':'#f03a45',fillOpacity:.58});poly.addTo(captured);captures.push({side,country:activeCountry,layer:poly});updateNames();hideToast();toast('Территория захвачена!','Игровая симуляция — '+(side==='Ukraine'?'синяя':'красная')+' сторона');setTimeout(hideToast,1700);pts=[];activeCountry=null},900)}
+map.on('mousedown',start);map.on('mousemove',move);map.on('mouseup',e=>{if(e.originalEvent.button===2)end()});
+map.getContainer().addEventListener('contextmenu',e=>e.preventDefault());map.getContainer().addEventListener('mouseleave',()=>{if(drawing)end()});
+map.on('touchstart',e=>{if(!countryGeo.Ukraine||!countryGeo.Russia)return;let c=whichCountry(e.latlng);if(!c)return;drawing=true;activeCountry=c;pts=[e.latlng];if(preview)map.removeLayer(preview);preview=L.polyline(pts,{color:lines[side],weight:5}).addTo(map);map.dragging.disable()});
+map.on('touchmove',e=>{if(!drawing)return;if(whichCountry(e.latlng)!==activeCountry)return;let last=pts[pts.length-1];if(map.distance(last,e.latlng)>300){pts.push(e.latlng);if(preview)map.removeLayer(preview);preview=L.polyline(pts,{color:lines[side],weight:5}).addTo(map)}});
+map.on('touchend',end);
+document.getElementById('save').onclick=()=>{let blob=new Blob([JSON.stringify({disclaimer:'Вымышленная игровая симуляция; не реальные боевые действия.',captures:captures.map(c=>({side:c.side,country:c.country,geojson:c.layer.toGeoJSON()}))},null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='geofront-game-save.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+async function loadCountries(){try{toast('Загружаю карту...','Подключаю границы стран');const url='https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';const res=await fetch(url);if(!res.ok)throw Error('geojson');const data=await res.json();let wanted=[];for(const f of data.features){let name=f.properties.ADMIN||f.properties.name||f.properties.NAME;if(name==='Ukraine')countryGeo.Ukraine=f.geometry;if(name==='Russia'||name==='Russian Federation')countryGeo.Russia=f.geometry;if(name==='Ukraine'||name==='Russia'||name==='Russian Federation')wanted.push(f)}if(!countryGeo.Ukraine||!countryGeo.Russia)throw Error('country missing');countryLayer=L.geoJSON(wanted,{style:f=>{let name=f.properties.ADMIN||f.properties.name||f.properties.NAME;return {color:name==='Ukraine'?'#a8d5ff':'#ffb3b7',weight:1.8,fillColor:name==='Ukraine'?'#4e91ff':'#f34c55',fillOpacity:.42}}}).addTo(map);map.fitBounds(countryLayer.getBounds(),{padding:[20,90]});hideToast()}catch(e){hideToast();toast('Не удалось загрузить границы','Проверь интернет и обнови страницу');}}
+loadCountries();
 })();
 </script></body></html>
