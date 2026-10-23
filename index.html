@@ -58,7 +58,40 @@ map.on('touchstart',e=>{if(!countryGeo.Ukraine||!countryGeo.Russia)return;let c=
 map.on('touchmove',e=>{if(!drawing)return;if(whichCountry(e.latlng)!==activeCountry)return;let last=pts[pts.length-1];if(map.distance(last,e.latlng)>300){pts.push(e.latlng);if(preview)map.removeLayer(preview);preview=L.polyline(pts,{color:lines[side],weight:5}).addTo(map)}});
 map.on('touchend',end);
 document.getElementById('save').onclick=()=>{let blob=new Blob([JSON.stringify({disclaimer:'Вымышленная игровая симуляция; не реальные боевые действия.',captures:captures.map(c=>({side:c.side,country:c.country,geojson:c.layer.toGeoJSON()}))},null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='geofront-game-save.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
-async function loadCountries(){try{toast('Загружаю карту...','Подключаю границы стран');const url='https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';const res=await fetch(url);if(!res.ok)throw Error('geojson');const data=await res.json();let wanted=[];for(const f of data.features){let name=f.properties.ADMIN||f.properties.name||f.properties.NAME;if(name==='Ukraine')countryGeo.Ukraine=f.geometry;if(name==='Russia'||name==='Russian Federation')countryGeo.Russia=f.geometry;if(name==='Ukraine'||name==='Russia'||name==='Russian Federation')wanted.push(f)}if(!countryGeo.Ukraine||!countryGeo.Russia)throw Error('country missing');countryLayer=L.geoJSON(wanted,{style:f=>{let name=f.properties.ADMIN||f.properties.name||f.properties.NAME;return {color:name==='Ukraine'?'#a8d5ff':'#ffb3b7',weight:1.8,fillColor:name==='Ukraine'?'#4e91ff':'#f34c55',fillOpacity:.42}}}).addTo(map);map.fitBounds(countryLayer.getBounds(),{padding:[20,90]});hideToast()}catch(e){hideToast();toast('Не удалось загрузить границы','Проверь интернет и обнови страницу');}}
+async function loadCountries(){
+ toast('Загружаю границы...','Подключаю географические данные');
+ const urls=[
+  'https://cdn.jsdelivr.net/gh/datasets/geo-countries@master/data/countries.geojson',
+  'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson',
+  'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_countries.geojson'
+ ];
+ let data=null, lastError=null;
+ for(const url of urls){
+  try{
+   const res=await fetch(url,{cache:'force-cache'});
+   if(!res.ok)throw Error('HTTP '+res.status);
+   const candidate=await res.json();
+   if(candidate && Array.isArray(candidate.features) && candidate.features.length>100){data=candidate;break}
+   throw Error('Некорректный GeoJSON');
+  }catch(err){lastError=err}
+ }
+ if(!data){hideToast();toast('Источник границ недоступен','Попробуй перезагрузить страницу позже');console.error(lastError);return}
+ const getName=f=>String(f.properties?.ADMIN||f.properties?.admin||f.properties?.name||f.properties?.NAME||f.properties?.NAME_EN||f.properties?.SOVEREIGNT||'').toLowerCase();
+ const wanted=[];
+ for(const f of data.features){
+  const n=getName(f);
+  const isUkraine=n==='ukraine';
+  const isRussia=n==='russia'||n==='russian federation'||n==='russian fed.';
+  if(isUkraine)countryGeo.Ukraine=f.geometry;
+  if(isRussia)countryGeo.Russia=f.geometry;
+  if(isUkraine||isRussia){f.properties={...(f.properties||{}),_gameSide:isUkraine?'Ukraine':'Russia'};wanted.push(f)}
+ }
+ if(!countryGeo.Ukraine||!countryGeo.Russia){hideToast();toast('Не найдены границы стран','Источник карты вернул неполные данные');return}
+ countryLayer=L.geoJSON(wanted,{style:f=>{const uk=f.properties._gameSide==='Ukraine';return {color:uk?'#a8d5ff':'#ffb3b7',weight:1.8,fillColor:uk?'#4e91ff':'#f34c55',fillOpacity:.42}}}).addTo(map);
+ // Keep the view around Ukraine and nearby western Russia, not the whole Russian Federation.
+ map.setView([49.0,36.0],4.8);
+ hideToast();
+}
 loadCountries();
 })();
 </script></body></html>
