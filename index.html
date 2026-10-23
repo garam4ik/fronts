@@ -18,7 +18,7 @@
 <div class="sides"><button class="side" data-side="red"><span class="dot" style="background:var(--red)"></span>Россия</button><button class="side active" data-side="blue"><span class="dot" style="background:var(--blue)"></span>Украина</button><button class="side" data-side="gray"><span class="dot" style="background:var(--gray)"></span>Серая</button><button class="side" data-side="yellow"><span class="dot" style="background:var(--yellow)"></span>Нейтр.</button></div>
 <div class="tools"><button id="area">⬠ Обвести область</button><button id="line">✎ Линия</button><button id="undo">↶ Отменить</button><button id="erase">⌫ Ластик</button></div>
 <div class="tools"><button id="finish" disabled>✓ Завершить</button><button id="cancel" disabled>✕ Отмена</button><button id="clear">Очистить всё</button><button id="export">Экспорт JSON</button></div>
-<div class="drawingNote" id="drawingNote">Нажимай на карту, чтобы ставить точки. Когда обведёшь область — нажми «Завершить».</div>
+<div class="drawingNote" id="drawingNote">Зажми левую кнопку мыши и веди по карте. Отпусти кнопку — рисунок завершится автоматически.</div>
 <div class="notice">⚠ Это вымышленная игра. Раскраска, линии и проценты не показывают реальные боевые действия, линию фронта или контроль территорий.</div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -33,13 +33,22 @@ function toast(s){let t=document.getElementById('toast');t.textContent=s;t.style
 function style(s,kind){return {color:color[s],weight:kind==='line'?7:3,opacity:.95,fillColor:color[s],fillOpacity:kind==='line'?0:.48}}
 function snap(){history.push(drawn.toGeoJSON());if(history.length>50)history.shift()}
 function update(){let c={red:0,blue:0,gray:0,yellow:0};drawn.eachLayer(l=>{c[l._side||'blue']++});let n=Object.values(c).reduce((a,b)=>a+b,0)||1;for(let k in c)document.getElementById(k+'Pct').textContent=(100*c[k]/n).toFixed(1).replace('.',',')+'%'}
-function finishMode(){mode=null;points=[];if(preview){map.removeLayer(preview);preview=null}document.getElementById('drawingNote').style.display='none';document.getElementById('finish').disabled=true;document.getElementById('cancel').disabled=true}
-function begin(m){erase=false;mode=m;points=[];if(preview)map.removeLayer(preview);preview=null;document.getElementById('drawingNote').style.display='block';document.getElementById('finish').disabled=false;document.getElementById('cancel').disabled=false;toast(m==='area'?'Ставь точки по контуру области':'Ставь точки линии');}
-function addVertex(ll){points.push(ll);if(preview)map.removeLayer(preview);preview=(mode==='area'?L.polygon(points,style(side,'area')):L.polyline(points,style(side,'line'))).addTo(map);if(points.length>=3&&mode==='area')document.getElementById('drawingNote').firstChild.textContent='Точки: '+points.length+'. Продолжай по контуру или заверши. ';}
-map.on('click',e=>{if(mode){addVertex(e.latlng);return}if(erase){let hit=null;drawn.eachLayer(l=>{if(l.getBounds&&l.getBounds().contains(e.latlng))hit=l});if(hit){snap();drawn.removeLayer(hit);update()}}});
+function finishMode(){mode=null;points=[];if(preview){map.removeLayer(preview);preview=null}map.dragging.enable();document.getElementById('drawingNote').style.display='none';document.getElementById('finish').disabled=true;document.getElementById('cancel').disabled=true}
+function begin(m){erase=false;mode=m;points=[];if(preview){map.removeLayer(preview);preview=null}map.dragging.disable();document.getElementById('drawingNote').style.display='block';document.getElementById('finish').disabled=true;document.getElementById('cancel').disabled=false;document.getElementById('drawingNote').innerHTML='Зажми левую кнопку мыши и веди по карте, чтобы обвести. Отпусти кнопку — готово.';toast(m==='area'?'Зажми мышь и обведи территорию':'Зажми мышь и нарисуй линию')}
+function addVertex(ll){if(points.length){let last=points[points.length-1];if(map.distance(last,ll)<1000)return}points.push(ll);if(preview)map.removeLayer(preview);preview=(mode==='area'?L.polygon(points,style(side,'area')):L.polyline(points,style(side,'line'))).addTo(map)}
+let isDrawing=false;
+map.getContainer().addEventListener('contextmenu',e=>e.preventDefault());
+map.on('mousedown',e=>{if(!mode||erase||e.originalEvent.button!==0)return;isDrawing=true;points=[];if(preview){map.removeLayer(preview);preview=null}addVertex(e.latlng);map.dragging.disable();L.DomEvent.preventDefault(e.originalEvent)});
+map.on('mousemove',e=>{if(isDrawing&&mode)addVertex(e.latlng)});
+function finishStroke(){if(!isDrawing)return;isDrawing=false;if(!mode)return;const required=mode==='area'?3:2;if(points.length<required){if(preview){map.removeLayer(preview);preview=null}points=[];toast(mode==='area'?'Обведи область чуть дольше':'Проведи линию чуть дольше');return}snap();let l=mode==='area'?L.polygon(points,style(side,'area')):L.polyline(points,style(side,'line'));l._side=side;l.addTo(drawn);finishMode();update();toast('Готово — рисунок сохранён на карте')}
+map.on('mouseup',finishStroke);
+map.getContainer().addEventListener('mouseleave',()=>{if(isDrawing)finishStroke()});
+map.on('touchstart',e=>{if(!mode||erase)return;isDrawing=true;points=[];if(preview){map.removeLayer(preview);preview=null}addVertex(e.latlng);map.dragging.disable()});
+map.on('touchmove',e=>{if(isDrawing&&mode)addVertex(e.latlng)});
+map.on('touchend',finishStroke);
 document.getElementById('area').onclick=()=>begin('area');document.getElementById('line').onclick=()=>begin('line');
-document.getElementById('finish').onclick=()=>{if(!mode)return;if((mode==='area'&&points.length<3)||(mode==='line'&&points.length<2)){toast(mode==='area'?'Для области нужно минимум 3 точки':'Для линии нужно минимум 2 точки');return}snap();let l=mode==='area'?L.polygon(points,style(side,'area')):L.polyline(points,style(side,'line'));l._side=side;l.addTo(drawn);finishMode();update();toast('Готово — фигура добавлена')};
-document.getElementById('cancel').onclick=()=>{finishMode();toast('Рисование отменено')};
+document.getElementById('finish').onclick=()=>{toast('Чтобы закончить, просто отпусти кнопку мыши')};
+document.getElementById('cancel').onclick=()=>{isDrawing=false;finishMode();toast('Рисование отменено')};
 document.querySelectorAll('[data-side]').forEach(b=>b.onclick=()=>{side=b.dataset.side;document.querySelectorAll('[data-side]').forEach(x=>x.classList.toggle('active',x===b));toast('Цвет: '+b.textContent.trim())});
 document.getElementById('erase').onclick=()=>{erase=!erase;document.getElementById('erase').classList.toggle('active',erase);finishMode();toast(erase?'Ластик: нажми на область или линию':'Ластик выключен')};
 document.getElementById('undo').onclick=()=>{if(mode){if(points.length){points.pop();if(preview)map.removeLayer(preview);preview=points.length?(mode==='area'?L.polygon(points,style(side,'area')):L.polyline(points,style(side,'line'))).addTo(map):null}else toast('Точек больше нет');return}if(!history.length){toast('Нечего отменять');return}let geo=history.pop();drawn.clearLayers();L.geoJSON(geo,{style:f=>style(f.properties?.side||'blue',f.geometry?.type==='LineString'?'line':'area')}).eachLayer(l=>{l._side=l.feature?.properties?.side||'blue';l.addTo(drawn)});update()};
