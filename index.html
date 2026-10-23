@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Карта фронта — игра</title>
+<style>
+:root{--bg:#17191d;--panel:#22252b;--line:#3a3e46;--text:#edf0f4;--muted:#aeb4bf;--blue:rgba(55,135,255,.48);--red:rgba(240,58,65,.48)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,Segoe UI,Arial,sans-serif}
+header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-size:20px;margin:0;font-weight:750}header p{margin:3px 0 0;color:var(--muted);font-size:13px}
+.app{display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px;padding:16px;max-width:1500px;margin:auto}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;align-self:start}
+h2{font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px}
+.sides{display:grid;gap:9px}.side{border:1px solid #454a54;border-radius:10px;padding:12px;text-align:left;color:var(--text);background:#292d34;cursor:pointer;font-weight:700;display:flex;align-items:center;gap:10px}
+.side.active{outline:2px solid #e7eaf0;border-color:transparent}.dot{width:18px;height:18px;border-radius:50%;display:inline-block}.red{background:var(--red);border:2px solid #f04a50}.blue{background:var(--blue);border:2px solid #438bff}
+.tools{display:grid;gap:10px;margin-top:20px}.toolrow{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted)}input[type=range]{width:120px;accent-color:#8daeff}
+button.action{border:1px solid #474c56;background:#30343c;color:var(--text);padding:10px 12px;border-radius:9px;cursor:pointer;font-weight:650}
+button.action:hover,.side:hover{filter:brightness(1.12)}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hint{font-size:12px;color:var(--muted);margin:14px 0 0}
+.stage{background:#202329;border:1px solid var(--line);border-radius:14px;overflow:hidden;min-height:540px;position:relative;display:flex;align-items:center;justify-content:center;padding:12px}
+#map{width:100%;height:calc(100vh - 150px);min-height:520px;max-height:850px;touch-action:none;user-select:none;cursor:crosshair}
+.land{fill:#777c84;stroke:#aeb3bb;stroke-width:2.5;stroke-linejoin:round}
+.border{fill:none;stroke:#aeb3bb;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;opacity:.62}
+.water{fill:#292d33}
+.label{font-size:18px;fill:#e7e9ed;opacity:.78;letter-spacing:2px;pointer-events:none}
+#paintLayer{pointer-events:none}
+.status{position:absolute;bottom:14px;left:14px;background:rgba(20,22,26,.86);border:1px solid #454a53;padding:8px 11px;border-radius:9px;color:#dce0e7;font-size:12px}
+@media(max-width:800px){.app{grid-template-columns:1fr}.panel{order:2}.stage{min-height:430px}#map{height:55vh;min-height:400px}header{padding:14px}}
+</style>
+</head>
+<body>
+<header><div><h1>Карта фронта</h1><p>Стратегическая мини-игра: выбирай сторону и закрашивай карту</p></div><div style="font-size:12px;color:#aeb4bf">Локальная игра · прогресс хранится в браузере</div></header>
+<div class="app">
+<aside class="panel">
+<h2>Выбери сторону</h2>
+<div class="sides">
+<button class="side active" data-side="red"><span class="dot red"></span> Красная сторона — Россия</button>
+<button class="side" data-side="blue"><span class="dot blue"></span> Синяя сторона — Украина</button>
+</div>
+<div class="tools">
+<h2>Инструменты</h2>
+<div class="toolrow"><label for="brush">Размер кисти</label><input id="brush" type="range" min="8" max="55" value="25"></div>
+<div class="toolrow"><label for="opacity">Прозрачность</label><input id="opacity" type="range" min="15" max="75" value="48"></div>
+<div class="actions">
+<button class="action" id="eraser">Ластик</button><button class="action" id="paint">Кисть</button>
+<button class="action" id="undo">Отменить</button><button class="action" id="clear">Сбросить</button>
+</div>
+<button class="action" id="save">Сохранить карту PNG</button>
+</div>
+<p class="hint">Зажми левую кнопку мыши и рисуй по карте. Цвета полупрозрачные, поэтому серый фон и границы остаются видны. Это условная игровая карта, не карта реальных текущих боевых действий.</p>
+</aside>
+<main class="stage">
+<svg id="map" viewBox="0 0 900 680" role="img" aria-label="Условная карта Украины для рисования">
+<defs>
+<clipPath id="ukraineClip"><path id="ukraineShape" d="M120 285 L145 250 L180 238 L201 205 L245 190 L274 205 L307 186 L342 204 L375 190 L404 209 L439 195 L470 215 L503 204 L528 225 L560 219 L580 239 L612 234 L641 252 L675 247 L700 267 L729 274 L744 299 L775 315 L765 339 L738 348 L730 373 L708 390 L697 423 L672 439 L655 466 L625 472 L606 497 L575 493 L550 517 L520 505 L493 519 L470 500 L438 505 L420 481 L392 488 L371 464 L343 472 L319 451 L292 460 L270 438 L241 441 L223 419 L196 416 L180 390 L154 384 L148 355 L128 337 L138 314 Z"/></clipPath>
+</defs>
+<rect class="water" width="900" height="680" rx="12"/>
+<!-- faint surrounding land -->
+<path d="M0 0H900V680H0Z" fill="#24272d"/>
+<path class="land" d="M120 285 L145 250 L180 238 L201 205 L245 190 L274 205 L307 186 L342 204 L375 190 L404 209 L439 195 L470 215 L503 204 L528 225 L560 219 L580 239 L612 234 L641 252 L675 247 L700 267 L729 274 L744 299 L775 315 L765 339 L738 348 L730 373 L708 390 L697 423 L672 439 L655 466 L625 472 L606 497 L575 493 L550 517 L520 505 L493 519 L470 500 L438 505 L420 481 L392 488 L371 464 L343 472 L319 451 L292 460 L270 438 L241 441 L223 419 L196 416 L180 390 L154 384 L148 355 L128 337 L138 314 Z"/>
+<g clip-path="url(#ukraineClip)" id="paintLayer"></g>
+<g class="border" clip-path="url(#ukraineClip)">
+<path d="M125 300L230 300L274 205M230 300L223 419M230 300L319 451M230 300L307 186M274 205L292 460M342 204L343 472M404 209L392 488M470 215L438 505M528 225L520 505M580 239L575 493M641 252L625 472M700 267L672 439M138 314L319 451M148 355L371 464M180 390L420 481M241 441L493 519M343 472L550 517M438 505L606 497M503 204L493 519M612 234L550 517" />
+</g>
+<text x="430" y="345" text-anchor="middle" class="label">УКРАИНА</text>
+<text x="450" y="625" text-anchor="middle" fill="#777e89" font-size="12">Условная игровая схема · не в масштабе</text>
+</svg>
+<div class="status" id="status">Выбрана сторона: Россия · кисть</div>
+</main>
+</div>
+<script>
+(() => {
+const svg=document.getElementById('map'), layer=document.getElementById('paintLayer');
+const brush=document.getElementById('brush'), opacity=document.getElementById('opacity'), status=document.getElementById('status');
+let side='red', drawing=false, erasing=false, current=null, history=[];
+const colors={red:[240,58,65],blue:[55,135,255]};
+function updateStatus(){status.textContent='Выбрана сторона: '+(side==='red'?'Россия':'Украина')+' · '+(erasing?'ластик':'кисть')}
+document.querySelectorAll('.side').forEach(b=>b.addEventListener('click',()=>{
+ document.querySelectorAll('.side').forEach(x=>x.classList.remove('active'));b.classList.add('active');side=b.dataset.side;erasing=false;updateStatus();
+}));
+function point(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse())}
+function saveHistory(){history.push(layer.innerHTML);if(history.length>30)history.shift()}
+function stamp(e){
+ const p=point(e),r=Number(brush.value)/2;
+ if(erasing){const el=document.elementFromPoint(e.clientX,e.clientY); if(el&&el.parentNode===layer)el.remove(); return}
+ const c=colors[side],o=Number(opacity.value)/100;
+ const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+ circle.setAttribute('cx',p.x);circle.setAttribute('cy',p.y);circle.setAttribute('r',r);
+ circle.setAttribute('fill',`rgba(${c[0]},${c[1]},${c[2]},${o})`);
+ circle.setAttribute('data-side',side);layer.appendChild(circle);
+}
+svg.addEventListener('pointerdown',e=>{if(e.button!==0&&e.pointerType==='mouse')return;drawing=true;saveHistory();svg.setPointerCapture(e.pointerId);stamp(e)});
+svg.addEventListener('pointermove',e=>{if(!drawing)return;stamp(e)});
+function end(){drawing=false}
+svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end);
+document.getElementById('eraser').onclick=()=>{erasing=true;updateStatus()};
+document.getElementById('paint').onclick=()=>{erasing=false;updateStatus()};
+document.getElementById('undo').onclick=()=>{if(history.length)layer.innerHTML=history.pop()};
+document.getElementById('clear').onclick=()=>{if(confirm('Точно очистить всю раскраску?')){saveHistory();layer.innerHTML=''}};
+document.getElementById('save').onclick=()=>{
+ const clone=svg.cloneNode(true);clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+ const source=new XMLSerializer().serializeToString(clone);
+ const blob=new Blob([source],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob);
+ const img=new Image();img.onload=()=>{const canvas=document.createElement('canvas');canvas.width=1800;canvas.height=1360;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,1800,1360);URL.revokeObjectURL(url);const a=document.createElement('a');a.download='karta-fronta.png';a.href=canvas.toDataURL('image/png');a.click()};img.src=url;
+};
+})();
+</script>
+</body>
+</html>
